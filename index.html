@@ -21,10 +21,13 @@ button{margin-top:8px}
 <h2>📸 Prise de photos</h2>
 <select id="tournee">
 <option value="">-- Tournée --</option>
-<option>B01</option><option>B02</option><option>B03</option><option>B04</option>
-<option>T09</option><option>T10</option><option>T11</option><option>T12</option>
-<option>T13</option><option>T14</option><option>T15</option><option>T16</option>
-<option>T17</option><option>T18</option><option>T19</option><option>T20</option>
+<option>B02</option><option>B03</option><option>B04</option><option>B06</option>
+<option>T08</option><option>T09</option><option>T10</option><option>T11</option>
+<option>T12</option><option>T13</option><option>T14</option><option>T15</option>
+<option>T16</option><option>T17</option><option>T18</option><option>T19</option>
+<option>T20</option><option>T21</option><option>T22</option><option>T23</option>
+<option>T24</option><option>T26-32</option><option>T28</option><option>T29</option>
+<option>T30</option><option>T31</option><option>T33</option><option>T34</option>
 </select>
 
 <input type="file" accept="image/*" capture="environment" multiple id="files">
@@ -37,13 +40,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
- apiKey: "COLLER_ICI",
- authDomain: "COLLER_ICI",
- projectId: "COLLER_ICI"
+ apiKey: "AIzaSyBD2yU8B8C-SL8gJMFEIa2PNzvBHuOjYmI",
+ authDomain: "storage-retours.firebaseapp.com",
+ projectId: "storage-retours"
 };
 
-const CLOUD_NAME = "COLLER_ICI";
-const UPLOAD_PRESET = "COLLER_ICI";
+const CLOUD_NAME = "djwfusdud";
+const UPLOAD_PRESET = "bon accord";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
