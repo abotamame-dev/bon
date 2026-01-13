@@ -4,24 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bons d’accord – Colis retour</title>
+
 <style>
-body{font-family:Arial;background:#f4f4f4;padding:16px}
-.card{background:#fff;padding:16px;border-radius:12px;margin-bottom:16px}
-img.logo{max-width:260px;margin:0 auto 16px;display:block}
-img.thumb{max-width:80px;border-radius:6px}
-.hidden{display:none}
-progress{width:100%;height:40px}
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ccc;padding:10px;text-align:center}
-button{margin:20px}
+:root{
+  --primary:#0057a8;
+  --secondary:#f2f6fb;
+  --danger:#c62828;
+}
+body{
+  font-family:Arial, sans-serif;
+  background:var(--secondary);
+  padding:16px;
+}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:14px;
+  margin-bottom:18px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+img.logo{
+  max-width:280px;
+  margin:0 auto 20px;
+  display:block;
+}
+h2{ color:var(--primary); }
+select,input{
+  width:100%;
+  padding:14px;
+  font-size:16px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  margin-bottom:12px;
+}
+button{
+  width:100%;
+  padding:16px;
+  font-size:17px;
+  border-radius:12px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:bold;
+  margin-top:8px;
+}
+button.secondary{ background:#777; }
+button.danger{ background:var(--danger); }
+progress{
+  width:100%;
+  height:22px;
+  margin-top:10px;
+}
+.hidden{ display:none; }
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:12px;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:8px;
+  text-align:center;
+  font-size:14px;
+}
+th{ background:#eef3fa; }
+img.thumb{ max-width:90px; border-radius:8px; }
+
+.actions button{
+  width:auto;
+  padding:8px 12px;
+  font-size:14px;
+  margin:2px;
+}
+
+.filters{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+}
+@media(max-width:768px){
+  .filters{ grid-template-columns:1fr; }
+}
 </style>
 </head>
+
 <body>
 
 <img src="logo.jpg" class="logo">
 
+<!-- UTILISATEUR -->
 <div class="card">
 <h2>📸 Prise de photos</h2>
+
 <select id="tournee">
 <option value="">-- Tournée --</option>
 <option>B02</option><option>B03</option><option>B04</option><option>B06</option>
@@ -32,23 +107,51 @@ button{margin:20px}
 <option>T24</option><option>T26-32</option><option>T28</option><option>T29</option>
 <option>T30</option><option>T31</option><option>T33</option><option>T34</option>
 </select>
-<input type="file" accept="image/*" capture="environment" multiple id="files">
+
+<input id="bon" placeholder="Numéro du bon d’accord">
+
+<input type="file" id="files" accept="image/*" capture="environment" multiple>
+
 <progress id="progress" value="0" max="100" class="hidden"></progress>
+
 <button onclick="upload()">☁️ Envoyer les photos</button>
+<button class="secondary" onclick="resetForm()">✅ Terminé / retour accueil</button>
 </div>
 
+<!-- LOGIN ADMIN -->
 <div class="card">
 <h2>🔐 Connexion admin</h2>
 <input id="email" placeholder="Email admin">
-<input id="password" type="password">
+<input id="password" type="password" placeholder="Mot de passe">
 <button onclick="login()">Connexion</button>
 </div>
 
+<!-- ADMIN -->
 <div id="admin" class="card hidden">
 <h2>📋 Interface admin</h2>
+
+<div class="filters">
+<select id="fTournee"><option value="">Toutes tournées</option></select>
+<input id="fBon" placeholder="Filtrer par bon">
+<select id="fStatut">
+  <option value="">Tous statuts</option>
+  <option value="false">En attente</option>
+  <option value="true">Traité</option>
+</select>
+</div>
+
+<button onclick="exportCSV()">📤 Export Excel (CSV)</button>
+
 <table>
 <thead>
-<tr><th>Photo</th><th>Date</th><th>Tournée</th><th>Statut</th><th>Actions</th></tr>
+<tr>
+  <th>Photo</th>
+  <th>Date</th>
+  <th>Tournée</th>
+  <th>Bon</th>
+  <th>Statut</th>
+  <th>Actions</th>
+</tr>
 </thead>
 <tbody id="photos"></tbody>
 </table>
@@ -59,10 +162,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* 🔥 PARAMÈTRES EXISTANTS CONSERVÉS */
 const firebaseConfig = {
- apiKey: "AIzaSyBD2yU8B8C-SL8gJMFEIa2PNzvBHuOjYmI",
- authDomain: "storage-retours.firebaseapp.com",
- projectId: "storage-retours"
+  apiKey: "AIzaSyBD2yU8B8C-SL8gJMFEIa2PNzvBHuOjYmI",
+  authDomain: "storage-retours.firebaseapp.com",
+  projectId: "storage-retours"
 };
 
 const CLOUD_NAME = "djwfusdud";
@@ -72,85 +176,121 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const tourneeEl = document.getElementById("tournee");
+const bonEl = document.getElementById("bon");
+const filesEl = document.getElementById("files");
+const progressEl = document.getElementById("progress");
+const photosEl = document.getElementById("photos");
+
 async function uploadFile(file, index, total){
- return new Promise((resolve,reject)=>{
-  const xhr = new XMLHttpRequest();
-  const form = new FormData();
-  form.append('file', file);
-  form.append('upload_preset', UPLOAD_PRESET);
+  return new Promise((resolve,reject)=>{
+    const xhr = new XMLHttpRequest();
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", UPLOAD_PRESET);
 
-  xhr.upload.onprogress = (e)=>{
-   if(e.lengthComputable){
-    const percent = Math.round(((index + e.loaded/e.total) / total) * 100);
-    document.getElementById('progress').value = percent;
-   }
-  };
+    xhr.upload.onprogress = e=>{
+      if(e.lengthComputable){
+        progressEl.value = Math.round(((index + e.loaded/e.total)/total)*100);
+      }
+    };
 
-  xhr.onload = async ()=>{
-   const data = JSON.parse(xhr.responseText);
-   await addDoc(collection(db,'photos'),{
-    tournee: document.getElementById('tournee').value,
-    date: new Date(),
-    url: data.secure_url,
-    traite: false
-   });
-   resolve();
-  };
+    xhr.onload = async ()=>{
+      const data = JSON.parse(xhr.responseText);
+      await addDoc(collection(db,"photos"),{
+        tournee: tourneeEl.value,
+        bon: bonEl.value,
+        date: new Date(),
+        url: data.secure_url,
+        traite: false
+      });
+      resolve();
+    };
 
-  xhr.onerror = reject;
-  xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
-  xhr.send(form);
- });
-}
-
-window.upload = async () => {
- const tournee = document.getElementById('tournee').value;
- const files = document.getElementById('files').files;
- if(!tournee) return alert("Choisir une tournée");
- if(!files.length) return alert("Aucune photo");
-
- const progress = document.getElementById('progress');
- progress.classList.remove('hidden');
- progress.value = 0;
-
- for(let i=0;i<files.length;i++){
-  await uploadFile(files[i], i, files.length);
- }
-
- progress.value = 100;
- alert("Photos envoyées");
- document.getElementById('files').value = "";
- progress.classList.add('hidden');
-}
-
-window.login = () => {
- signInWithEmailAndPassword(auth,email.value,password.value)
- .then(()=>{document.getElementById('admin').classList.remove('hidden');loadPhotos();})
- .catch(e=>alert(e.message));
-}
-
-function loadPhotos(){
- onSnapshot(collection(db,'photos'),snap=>{
-  photos.innerHTML='';
-  snap.forEach(d=>{
-   const p=d.data();
-   photos.innerHTML+=`
-    <tr>
-     <td><a href="${p.url}" target="_blank"><img src="${p.url}" class="thumb"></a></td>
-     <td>${new Date(p.date.seconds*1000).toLocaleString()}</td>
-     <td>${p.tournee}</td>
-     <td>${p.traite?'✅':'⏳'}</td>
-     <td>
-      <button onclick="valider('${d.id}')">Valider</button>
-      <button onclick="supprimer('${d.id}')">🗑️</button>
-     </td>
-    </tr>`;
+    xhr.onerror = reject;
+    xhr.open("POST",`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+    xhr.send(form);
   });
- });
 }
 
-window.valider=id=>updateDoc(doc(db,'photos',id),{traite:true});
-window.supprimer=id=>deleteDoc(doc(db,'photos',id));
+window.upload = async ()=>{
+  if(!tourneeEl.value) return alert("Choisir une tournée");
+  if(!filesEl.files.length) return alert("Aucune photo");
+  progressEl.classList.remove("hidden");
+  progressEl.value = 0;
+
+  for(let i=0;i<filesEl.files.length;i++){
+    await uploadFile(filesEl.files[i], i, filesEl.files.length);
+  }
+
+  alert("Photos envoyées");
+  resetForm();
+};
+
+window.resetForm = ()=>{
+  tourneeEl.value="";
+  bonEl.value="";
+  filesEl.value="";
+  progressEl.classList.add("hidden");
+};
+
+window.login = ()=>{
+  signInWithEmailAndPassword(auth,email.value,password.value)
+    .then(()=>{ admin.classList.remove("hidden"); loadPhotos(); })
+    .catch(e=>alert(e.message));
+};
+
+let allPhotos=[];
+function loadPhotos(){
+  onSnapshot(collection(db,"photos"),snap=>{
+    allPhotos=[];
+    photosEl.innerHTML="";
+    snap.forEach(d=>allPhotos.push({id:d.id,...d.data()}));
+    renderPhotos();
+  });
+}
+
+function renderPhotos(){
+  photosEl.innerHTML="";
+  allPhotos.forEach(p=>{
+    if(fTournee.value && p.tournee!==fTournee.value) return;
+    if(fBon.value && !(p.bon||"").includes(fBon.value)) return;
+    if(fStatut.value!=="" && String(p.traite)!==fStatut.value) return;
+
+    photosEl.innerHTML+=`
+      <tr>
+        <td><a href="${p.url}" target="_blank"><img src="${p.url}" class="thumb"></a></td>
+        <td>${new Date(p.date.seconds*1000).toLocaleString()}</td>
+        <td>${p.tournee}</td>
+        <td>${p.bon||""}</td>
+        <td>${p.traite?"✅":"⏳"}</td>
+        <td class="actions">
+          <button onclick="valider('${p.id}')">Valider</button>
+          <button class="danger" onclick="supprimer('${p.id}')">🗑️</button>
+        </td>
+      </tr>`;
+  });
+}
+
+window.valider=id=>updateDoc(doc(db,"photos",id),{traite:true});
+window.supprimer=id=>deleteDoc(doc(db,"photos",id));
+
+[fTournee,fBon,fStatut].forEach(e=>e.oninput=renderPhotos);
+
+window.exportCSV=()=>{
+  let csv="Date;Tournée;Bon;Statut;URL\n";
+  allPhotos.forEach(p=>{
+    csv+=`${new Date(p.date.seconds*1000).toLocaleString()};${p.tournee};${p.bon||""};${p.traite?"Traité":"En attente"};${p.url}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="bons-accord.csv";
+  a.click();
+};
+
+const tournees=[...tourneeEl.options].map(o=>o.value).filter(v=>v);
+tournees.forEach(t=>fTournee.innerHTML+=`<option>${t}</option>`);
 </script>
 
 </body>
