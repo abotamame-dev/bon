@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bons d’accord – Colis retour</title>
+<style>
+:root{--primary:#0057a8;--secondary:#f2f6fb;--danger:#c62828}
+body{font-family:Arial;background:var(--secondary);padding:16px}
+.card{background:#fff;padding:20px;border-radius:14px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+img.logo{max-width:280px;margin:0 auto 20px;display:block}
+h2{color:var(--primary)}
+select,input{width:100%;padding:14px;font-size:16px;border-radius:10px;border:1px solid #ccc;margin-bottom:12px}
+button{width:100%;padding:14px;font-size:16px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:bold;margin-top:6px}
+button.secondary{background:#777}
+button.danger{background:var(--danger)}
+progress{width:100%;height:20px;margin-top:10px}
+.hidden{display:none}
+#preview img{width:80px;border-radius:8px;margin:4px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
+th{background:#eef3fa}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.stat{background:#eef3fa;padding:10px;border-radius:10px;font-weight:bold;text-align:center}
+</style>
+</head>
+
+<body>
+<img src="logo.jpg" class="logo">
+
+<!-- UTILISATEUR -->
+<div class="card">
+<h2>📸 Prise de photos</h2>
+<select id="tournee">
+<option value="">-- Tournée --</option>
+<option>B02</option><option>B03</option><option>B04</option><option>B06</option>
+<option>T08</option><option>T09</option><option>T10</option><option>T11</option>
+</select>
+<input id="bon" placeholder="Numéro du bon d’accord">
+<video id="video" autoplay playsinline style="width:100%;border-radius:12px"></video>
+<button onclick="takePhoto()">📸 Prendre UNE photo</button>
+<input type="file" id="files" accept="image/*" multiple>
+<div id="preview"></div>
+<progress id="progress" value="0" max="100" class="hidden"></progress>
+<button onclick="upload()">☁️ Envoyer</button>
+<button class="secondary" onclick="resetForm()">Terminé</button>
+<canvas id="canvas" class="hidden"></canvas>
+</div>
+
+<!-- ADMIN -->
+<div class="card">
+<h2>🔐 Admin</h2>
+<input id="email" placeholder="Email admin">
+<input id="password" type="password" placeholder="Mot de passe">
+<button onclick="login()">Connexion</button>
+</div>
+
+<div id="admin" class="card hidden">
+<h2>📊 Statistiques</h2>
+<div class="stats">
+<div class="stat">Total<br><span id="sTotal">0</span></div>
+<div class="stat">En attente<br><span id="sWait">0</span></div>
+<div class="stat">Traité<br><span id="sDone">0</span></div>
+</div>
+
+<button class="danger" onclick="cleanup()">🗑️ Supprimer photos &gt; 30 jours</button>
+
+<table>
+<thead>
+<tr><th>Photo</th><th>Date</th><th>Tournée</th><th>Bon</th><th>Statut</th><th>Action</th></tr>
+</thead>
+<tbody id="photos"></tbody>
+</table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig={
+ apiKey:"AIzaSyBD2yU8B8C-SL8gJMFEIa2PNzvBHuOjYmI",
+ authDomain:"storage-retours.firebaseapp.com",
+ projectId:"storage-retours"
+};
+
+const CLOUD_NAME="djwfusdud";
+const UPLOAD_PRESET="bon accord";
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const preview=document.getElementById("preview");
+const progress=document.getElementById("progress");
+const tournee=document.getElementById("tournee");
+const bon=document.getElementById("bon");
+const files=document.getElementById("files");
+const photosEl=document.getElementById("photos");
+
+let photosTemp=[],all=[];
+
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(s=>video.srcObject=s);
+
+window.takePhoto=()=>{
+ canvas.width=video.videoWidth;
+ canvas.height=video.videoHeight;
+ canvas.getContext("2d").drawImage(video,0,0);
+ const img=canvas.toDataURL("image/jpeg",0.7);
+ addTemp(img);
+};
+
+files.onchange=()=>{
+ [...files.files].forEach(f=>{
+  const r=new FileReader();
+  r.onload=e=>addTemp(e.target.result);
+  r.readAsDataURL(f);
+ });
+};
+
+function addTemp(img){
+ photosTemp.push(img);
+ const i=document.createElement("img");
+ i.src=img;
+ preview.appendChild(i);
+}
+
+async function uploadBase64(img){
+ const xhr=new XMLHttpRequest();
+ const form=new FormData();
+ form.append("file",img);
+ form.append("upload_preset",UPLOAD_PRESET);
+ return new Promise(res=>{
+  xhr.onload=async()=>{
+   const d=JSON.parse(xhr.responseText);
+   await addDoc(collection(db,"photos"),{
+    tournee:tournee.value,
+    bon:bon.value,
+    date:new Date(),
+    url:d.secure_url,
+    traite:false
+   });
+   res();
+  };
+  xhr.open("POST",`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+  xhr.send(form);
+ });
+}
+
+window.upload=async()=>{
+ if(!photosTemp.length)return alert("Aucune photo");
+ progress.classList.remove("hidden");
+ for(const p of photosTemp) await uploadBase64(p);
+ resetForm();
+};
+
+window.resetForm=()=>{
+ photosTemp=[];
+ preview.innerHTML="";
+ files.value="";
+ bon.value="";
+ tournee.value="";
+ progress.classList.add("hidden");
+};
+
+window.login=()=>{
+ signInWithEmailAndPassword(auth,email.value,password.value)
+ .then(()=>{admin.classList.remove("hidden");load();});
+};
+
+function load(){
+ onSnapshot(collection(db,"photos"),snap=>{
+  all=[];
+  photosEl.innerHTML="";
+  let w=0,d=0;
+  snap.forEach(docu=>{
+   const p={id:docu.id,...docu.data()};
+   all.push(p);
+   p.traite?d++:w++;
+   photosEl.innerHTML+=`<tr>
+    <td><img src="${p.url}" width="60"></td>
+    <td>${new Date(p.date.seconds*1000).toLocaleDateString()}</td>
+    <td>${p.tournee}</td>
+    <td>${p.bon||""}</td>
+    <td>${p.traite?"✅":"⏳"}</td>
+    <td><button onclick="valider('${p.id}')">✔</button></td>
+   </tr>`;
+  });
+  sTotal.textContent=all.length;
+  sWait.textContent=w;
+  sDone.textContent=d;
+ });
+}
+
+window.valider=id=>updateDoc(doc(db,"photos",id),{traite:true});
+
+window.cleanup=async()=>{
+ if(!confirm("Supprimer les photos de plus de 30 jours ?"))return;
+ const limit=Date.now()-30*24*60*60*1000;
+ for(const p of all){
+  if(p.date.seconds*1000<limit){
+   await deleteDoc(doc(db,"photos",p.id));
+  }
+ }
+ alert("Nettoyage terminé");
+};
+</script>
+
+</body>
+</html>
