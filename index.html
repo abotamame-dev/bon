@@ -2,176 +2,180 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Logistique - Semaine Complète</title>
+    <meta name="viewport" content="width=1280">
+    <title>Planning Logistique Officiel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .cell-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 2px; width: 100%; text-align: center; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; background: white; }
-        .bg-mal, .bg-at { background-color: #f97316 !important; color: white !important; } 
-        .bg-cp { background-color: #fef08a !important; color: black !important; }
-        .bg-abs { background-color: #ef4444 !important; color: white !important; }
-        .tournee-ok { border-color: #22c55e; color: #15803d; background: #dcfce7; }
-        @media print { .no-print { display: none !important; } body { background: white; padding: 0; } .employee-card { break-inside: avoid; border: 1px solid #eee; margin-bottom: 5px; } }
-        .day-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-        @media (max-width: 768px) { .day-grid { grid-template-columns: 1fr; } .day-box { border-bottom: 1px solid #f1f5f9; padding: 4px 0; } }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem; padding: 2px; height: 30px; }
+        .name-col { width: 180px; text-align: left; padding-left: 8px; font-weight: 800; background: #f8fafc; }
+        .hour-col { width: 50px; background: #f1f5f9; color: #64748b; font-size: 0.6rem; }
+        .cell-input { width: 100%; height: 100%; border: none; text-align: center; font-weight: 800; text-transform: uppercase; background: transparent; outline: none; }
+        
+        /* Couleurs de ton image */
+        .header-date { background-color: #93c5fd; font-weight: 900; }
+        .header-sub { background-color: #fef08a; font-weight: 800; }
+        .bg-mal, .bg-at { background-color: #f97316 !important; color: white; }
+        .bg-cp { background-color: #fef08a !important; color: black; }
+        .bg-abs { background-color: #ef4444 !important; color: white; }
+        .bg-bureau { background-color: #e2e8f0; }
+        .tournee-ok { border: 2px solid #22c55e !important; background: #dcfce7; color: #15803d; }
+        
+        @media print { 
+            .no-print { display: none !important; } 
+            body { padding: 0; background: white; }
+            table { font-size: 0.5rem; }
+            .bg-mal, .bg-at, .bg-cp, .header-date { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
-<body class="bg-slate-100 p-2 font-sans text-slate-900">
+<body class="bg-slate-200 p-2 font-sans">
 
-<div class="max-w-6xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-slate-200">
+<div class="mx-auto bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-300">
     
     <div class="p-4 bg-slate-800 text-white no-print">
-        <div class="flex flex-col gap-3">
-            <div class="flex justify-between items-center">
-                <h1 class="font-bold text-lg text-blue-400 uppercase tracking-tighter">Planning 5 Jours - Complet</h1>
-                <button onclick="window.print()" class="bg-emerald-600 px-4 py-2 rounded text-xs font-bold uppercase">Imprimer / PDF</button>
-            </div>
-            <div class="flex flex-wrap gap-2 text-[10px]">
-                <select id="week-selector" onchange="switchWeek()" class="bg-slate-700 p-2 rounded font-bold">
-                    <option value="S1">Semaine 1</option><option value="S2">Semaine 2</option>
+        <div class="flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <h1 class="text-xl font-black text-blue-400">PLANNING LOGISTIQUE</h1>
+                <select id="week-selector" onchange="switchWeek()" class="bg-slate-700 p-2 rounded font-bold text-xs">
+                    <option value="S1">SEMAINE 1</option>
+                    <option value="S2">SEMAINE 2</option>
                 </select>
-                <input type="date" id="monday-picker" onchange="save()" class="bg-slate-700 p-2 rounded font-bold text-white">
-                <button onclick="resetAll()" class="bg-red-900/50 px-3 py-2 rounded font-bold">RESET</button>
+                <div class="flex items-center bg-slate-700 p-1 rounded">
+                    <span class="text-[10px] px-2 font-bold uppercase">Début Lundi :</span>
+                    <input type="date" id="monday-picker" onchange="save()" class="bg-transparent text-white text-xs font-bold outline-none">
+                </div>
             </div>
-            <div id="status-container" class="flex flex-wrap gap-1 p-2 bg-black/20 rounded"></div>
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="bg-emerald-600 px-4 py-2 rounded font-bold text-xs">🖨️ IMPRIMER / PDF</button>
+                <button onclick="resetAll()" class="bg-red-600 px-4 py-2 rounded font-bold text-xs">RESET</button>
+            </div>
         </div>
+        <div id="status-container" class="mt-4 flex flex-wrap gap-1 p-2 bg-black/20 rounded"></div>
     </div>
 
-    <div id="planning-container" class="p-2 space-y-2 bg-slate-50">
-        </div>
+    <div class="overflow-x-auto">
+        <table id="main-table">
+            <thead>
+                <tr id="row-dates">
+                    <th class="header-date" style="width: 180px;">Date</th>
+                    </tr>
+                <tr id="row-headers">
+                    <th class="header-sub">Collaborateur</th>
+                    </tr>
+            </thead>
+            <tbody id="planning-body">
+                </tbody>
+        </table>
+    </div>
 
-    <div class="p-4 bg-white border-t">
-        <textarea id="notes-area" class="w-full p-2 border rounded text-xs" placeholder="Notes de la semaine..." oninput="save()"></textarea>
+    <div class="p-4 bg-slate-50 border-t no-print">
+        <textarea id="notes-area" class="w-full p-2 border rounded text-xs" placeholder="Notes et consignes..." oninput="save()"></textarea>
     </div>
 </div>
 
 <script>
     const tournsOblig = ["T3","T13","T14","T19","T20","T24","T31","T35"];
-    const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+    const joursLabel = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
     
-    // DONNÉES EXACTES DE TON IMAGE (1er jour)
-    const equipeOfficielle = [
-        {n:"ADAM TOM", c:["T20","T3","T20","T3","T20","T3","T20","T3","T20","T3"]},
-        {n:"ALAJOUANINE STEPHANE", c:["MAL","MAL","MAL","MAL","MAL","MAL","MAL","MAL","MAL","MAL"]},
-        {n:"BEDAT QUENTIN", m:"05h30", c:["T13","T13","T13","T13","T13","T13","T13","T13","T13","T13"]},
-        {n:"BERNARD RYAN", c:["T23+10H","T13","T23+10H","T13","T23+10H","T13","T23+10H","T13","T23+10H","T13"]},
-        {n:"BILLIAUX CELINE", c:["","","","","","","","","",""]},
-        {n:"BRUNET NICOLAS", c:["T34","T34","T34","T34","T34","T34","T34","T34","T34","T34"]},
-        {n:"CAMELOT JEAN LUC", c:["T28","T28","T28","T28","T28","T28","T28","T28","T28","T28"]},
-        {n:"CAMPET AURELIEN", c:["T16+10H","T16","T16+10H","T16","T16+10H","T16","T16+10H","T16","T16+10H","T16"]},
-        {n:"CHARGE MICKAEL", c:["T11","T11","T11","T11","T11","T11","T11","T11","T11","T11"]},
-        {n:"CHARRON ANTHONY", c:["","T02","","T02","","T02","","T02","","T02"]},
-        {n:"CHAUVET EMILIE", c:["T14","T14","T14","T14","T14","T14","T14","T14","T14","T14"]},
-        {n:"CHEVALIER MARIEN", c:["AT","AT","AT","AT","AT","AT","AT","AT","AT","AT"]},
-        {n:"DEBAILLEUL REMI", c:["T4 GRAD","BUREAU","T4 GRAD","BUREAU","T4 GRAD","BUREAU","T4 GRAD","BUREAU","T4 GRAD","BUREAU"]},
-        {n:"DIALLO MOHAMED", c:["T6","T6","T6","T6","T6","T6","T6","T6","T6","T6"]},
-        {n:"FARI LAURENT", c:["CP","CP","CP","CP","CP","CP","CP","CP","CP","CP"]},
-        {n:"FERDIN FREDERIC", c:["T18","T18","T18","T18","T18","T18","T18","T18","T18","T18"]},
-        {n:"GELEZ MARION", c:["T03","T20","T03","T20","T03","T20","T03","T20","T03","T20"]},
-        {n:"GRIVELET STEPHANE", c:["T9","T9+MUR","T9","T9+MUR","T9","T9+MUR","T9","T9+MUR","T9","T9+MUR"]},
-        {n:"GUILLO SEBASTIEN", c:["BUREAU","BUREAU","BUREAU","BUREAU","BUREAU","BUREAU","BUREAU","BUREAU","BUREAU","BUREAU"]},
-        {n:"HOUNTENTO ABEL", c:["ABS","ABS","ABS","ABS","ABS","ABS","ABS","ABS","ABS","ABS"]},
-        {n:"HUCHET DIMITRI", c:["T19","T19","T19","T19","T19","T19","T19","T19","T19","T19"]},
-        {n:"JEANNOT MICHAEL", c:["T12+10H","T12","T12+10H","T12","T12+10H","T12","T12+10H","T12","T12+10H","T12"]},
-        {n:"KICHENIN STEVENS", c:["AT","AT","AT","AT","AT","AT","AT","AT","AT","AT"]},
-        {n:"LACAMBRA DAVID", c:["T15","T15","T15","T15","T15","T15","T15","T15","T15","T15"]},
-        {n:"LARRIEU JEAN CHRISTOPHE", c:["T02","","T02","","T02","","T02","","T02",""]},
-        {n:"LIVET KARINE", c:["T33","T33","T33","T33","T33","T33","T33","T33","T33","T33"]},
-        {n:"MALOKA PRISO EMMANUEL", c:["AT","AT","AT","AT","AT","AT","AT","AT","AT","AT"]},
-        {n:"MAMONA NGUDI AUDRY", c:["T22","T22","T22","T22","T22","T22","T22","T22","T22","T22"]},
-        {n:"MEYNARD THIERRY", c:["T35","T4/T4","T35","T4/T4","T35","T4/T4","T35","T4/T4","T35","T4/T4"]},
-        {n:"MONTES STEEVEN", c:["T30","T30+CV","T30","T30+CV","T30","T30+CV","T30","T30+CV","T30","T30+CV"]},
-        {n:"MOURY ROMARIC", c:["T37","T37","T37","T37","T37","T37","T37","T37","T37","T37"]},
-        {n:"NAVAS MATEO", c:["T26/32","T26/32","T26/32","T26/32","T26/32","T26/32","T26/32","T26/32","T26/32","T26/32"]},
-        {n:"OMIECINSKI MAX", c:["CP","T29","CP","T29","CP","T29","CP","T29","CP","T29"]},
-        {n:"OUHANI TARIK", c:["T21","T21","T21","T21","T21","T21","T21","T21","T21","T21"]},
-        {n:"PEREZ OCEANE", c:["T4 PESSAC","T35","T4 PESSAC","T35","T4 PESSAC","T35","T4 PESSAC","T35","T4 PESSAC","T35"]},
-        {n:"PETIT AURELIEN", c:["T17","T17","T17","T17","T17","T17","T17","T17","T17","T17"]},
-        {n:"PEZIN WILLIAM", c:["T31","T31","T31","T31","T31","T31","T31","T31","T31","T31"]},
-        {n:"ROUCOU LISA", c:["T8","T8+15H","T8","T8+15H","T8","T8+15H","T8","T8+15H","T8","T8+15H"]},
-        {n:"SEISDEDOS SEBASTIEN", c:["T29","POND","T29","POND","T29","POND","T29","POND","T29","POND"]},
-        {n:"SOUMARE MOUSSA", c:["T24+10H","T24","T24+10H","T24","T24+10H","T24","T24+10H","T24","T24+10H","T24"]},
-        {n:"TEXIER FRANCK", c:["CP","CP","CP","CP","CP","CP","CP","CP","CP","CP"]},
-        {n:"VANACKER LUDOVIC", c:["T37","T37","T37","T37","T37","T37","T37","T37","T37","T37"]},
-        {n:"VIANCE PHILIPPE", c:["T10+10H","T10","T10+10H","T10","T10+10H","T10","T10+10H","T10","T10+10H","T10"]}
+    const equipe = [
+        "ADAM TOM","ALAJOUANINE STEPHANE","BEDAT QUENTIN","BERNARD RYAN","BILLIAUX CELINE","BRUNET NICOLAS","CAMELOT JEAN LUC","CAMPET AURELIEN","CHARGE MICKAEL","CHARRON ANTHONY","CHAUVET EMILIE","CHEVALIER MARIEN","DEBAILLEUL REMI","DIALLO MOHAMED","FARI LAURENT","FERDIN FREDERIC","GELEZ MARION","GRIVELET STEPHANE","GUILLO SEBASTIEN","HOUNTENTO ABEL","HUCHET DIMITRI","JEANNOT MICHAEL","KICHENIN STEVENS","LACAMBRA DAVID","LARRIEU JEAN CHRISTOPHE","LIVET KARINE","MALOKA PRISO EMMANUEL","MAMONA NGUDI AUDRY","MEYNARD THIERRY","MONTES STEEVEN","MOURY ROMARIC","NAVAS MATEO","OMIECINSKI MAX","OUHANI TARIK","PEREZ OCEANE","PETIT AURELIEN","PEZIN WILLIAM","ROUCOU LISA","SEISDEDOS SEBASTIEN","SOUMARE MOUSSA","TEXIER FRANCK","VANACKER LUDOVIC","VIANCE PHILIPPE"
     ];
 
-    let db = JSON.parse(localStorage.getItem('pCompletV5')) || {};
+    let db = JSON.parse(localStorage.getItem('planningOfficialV1')) || {};
+
+    function initTableHeaders(monday) {
+        const rowDates = document.getElementById('row-dates');
+        const rowHeaders = document.getElementById('row-headers');
+        rowDates.innerHTML = '<th class="header-date">Date</th>';
+        rowHeaders.innerHTML = '<th class="header-sub">Collaborateur</th>';
+
+        for (let i = 0; i < 5; i++) {
+            let d = new Date(monday);
+            d.setDate(d.getDate() + i);
+            let dateStr = monday ? d.toLocaleDateString('fr-FR') : joursLabel[i];
+            
+            rowDates.innerHTML += `<th colspan="3" class="header-date">${dateStr}</th>`;
+            rowHeaders.innerHTML += `
+                <th class="header-sub" style="width:40px">Heure</th>
+                <th class="header-sub">MATIN</th>
+                <th class="header-sub">APM</th>
+            `;
+        }
+    }
 
     function save() {
         const week = document.getElementById('week-selector').value;
-        const rows = document.querySelectorAll('.employee-card');
+        const rows = document.querySelectorAll('#planning-body tr');
         db[week] = {
             monday: document.getElementById('monday-picker').value,
             notes: document.getElementById('notes-area').value,
             data: Array.from(rows).map(r => ({
-                name: r.querySelector('.name-input').value,
+                name: r.querySelector('.name-col').innerText,
                 cells: Array.from(r.querySelectorAll('.cell-input')).map(i => i.value)
             }))
         };
-        localStorage.setItem('pCompletV5', JSON.stringify(db));
-        check();
+        localStorage.setItem('planningOfficialV1', JSON.stringify(db));
+        updateDisplay();
     }
 
-    function addRow(name = "", cells = Array(10).fill("")) {
-        const cont = document.getElementById('planning-container');
-        const card = document.createElement('div');
-        card.className = "employee-card bg-white border rounded shadow-sm p-2";
-        
-        let grid = `<div class="day-grid mt-1">`;
-        jours.forEach((j, i) => {
-            grid += `<div class="day-box">
-                <div class="text-[8px] font-bold text-slate-400 uppercase">${j}</div>
-                <div class="flex gap-1">
-                    <input type="text" class="cell-input" value="${cells[i*2]||''}" oninput="save()">
-                    <input type="text" class="cell-input" value="${cells[i*2+1]||''}" oninput="save()">
-                </div>
-            </div>`;
-        });
-        grid += `</div>`;
-
-        card.innerHTML = `
-            <div class="flex justify-between items-center border-b pb-1">
-                <input type="text" class="name-input font-black uppercase text-[10px] text-slate-700 w-full outline-none" value="${name}" oninput="save()">
-                <button onclick="this.parentElement.parentElement.remove();save()" class="text-slate-200 no-print px-2">×</button>
-            </div>
-            ${grid}
-        `;
-        cont.appendChild(card);
+    function updateDisplay() {
+        const monday = document.getElementById('monday-picker').value;
+        initTableHeaders(monday);
+        checkTournees();
     }
 
     function switchWeek() {
         const week = document.getElementById('week-selector').value;
-        document.getElementById('planning-container').innerHTML = '';
+        const tbody = document.getElementById('planning-body');
+        tbody.innerHTML = '';
+        
         const data = db[week] || { data: [], notes: "", monday: "" };
         document.getElementById('monday-picker').value = data.monday || "";
         document.getElementById('notes-area').value = data.notes || "";
-        if (data.data.length === 0) equipeOfficielle.forEach(e => addRow(e.n, e.c));
-        else data.data.forEach(e => addRow(e.name, e.cells));
-        check();
+
+        equipe.forEach(name => {
+            const empData = data.data.find(e => e.name === name) || { cells: Array(10).fill("") };
+            const tr = document.createElement('tr');
+            let cellsHtml = `<td class="name-col">${name}</td>`;
+            
+            for (let i = 0; i < 5; i++) {
+                cellsHtml += `
+                    <td class="hour-col">05h30</td>
+                    <td><input type="text" class="cell-input" value="${empData.cells[i*2] || ''}" oninput="save()"></td>
+                    <td><input type="text" class="cell-input" value="${empData.cells[i*2+1] || ''}" oninput="save()"></td>
+                `;
+            }
+            tr.innerHTML = cellsHtml;
+            tbody.appendChild(tr);
+        });
+        updateDisplay();
     }
 
-    function check() {
+    function checkTournees() {
         const inputs = document.querySelectorAll('.cell-input');
-        const vals = [];
+        const found = [];
         inputs.forEach(i => {
             const v = i.value.toUpperCase();
-            i.className = "cell-input";
-            if(v === "CP") i.classList.add('bg-cp');
-            if(v === "MAL" || v === "AT") i.classList.add('bg-mal');
-            if(v === "ABS") i.classList.add('bg-abs');
-            const m = v.match(/T\d+/g);
-            if(m) m.forEach(t => vals.push(t));
+            const td = i.parentElement;
+            td.className = ""; // Reset
+            if(v === "CP") td.classList.add('bg-cp');
+            else if(v === "MAL" || v === "AT") td.classList.add('bg-mal');
+            else if(v === "ABS") td.classList.add('bg-abs');
+            else if(v === "BUREAU") td.classList.add('bg-bureau');
+            
+            tournsOblig.forEach(t => { if(v.includes(t)) found.push(t); });
         });
+
         const status = document.getElementById('status-container');
         status.innerHTML = '';
         tournsOblig.forEach(t => {
-            const ok = vals.includes(t);
-            status.innerHTML += `<div class="px-2 py-1 border rounded text-[8px] font-bold ${ok?'tournee-ok':'opacity-30 text-white'}">${t} ${ok?'✓':'○'}</div>`;
+            const ok = found.includes(t);
+            status.innerHTML += `<div class="px-2 py-1 rounded text-[10px] font-bold border ${ok ? 'tournee-ok' : 'opacity-30 text-white'}">${t} ${ok?'✓':'○'}</div>`;
         });
     }
 
-    function resetAll() { if(confirm("Voulez-vous réinitialiser ce planning ?")) { localStorage.clear(); location.reload(); } }
+    function resetAll() { if(confirm("Réinitialiser tout ?")) { localStorage.clear(); location.reload(); } }
 
     switchWeek();
 </script>
