@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1280">
-    <title>Planning Logistique - Contrôle Intégral</title>
+    <title>Planning Logistique - Full Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-        th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem; padding: 0; height: 32px; }
+        th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem; padding: 0; height: 30px; }
         .name-col { width: 180px; text-align: left; padding-left: 8px; font-weight: 800; background: #f8fafc; font-size: 0.75rem; }
         .hour-col { width: 45px; background: #f1f5f9; color: #64748b; font-size: 0.55rem; font-weight: bold; }
         .cell-select { width: 100%; height: 100%; border: none; text-align: center; font-weight: 900; text-transform: uppercase; background: transparent; outline: none; appearance: none; cursor: pointer; font-size: 0.7rem; }
@@ -15,15 +15,14 @@
         .header-date { background-color: #1e40af; color: white; font-weight: 900; height: 35px; }
         .header-sub { background-color: #fef08a; font-weight: 800; height: 25px; color: #854d0e; }
         
-        /* Panneau de Contrôle Optimisé */
+        /* Panneau de Contrôle Total */
         .ctrl-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
-        .ctrl-day { background: #0f172a; border-radius: 4px; padding: 6px; border: 1px solid #334155; }
-        .tournee-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; }
-        .status-box { font-size: 0.55rem; padding: 1px 4px; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; }
-        .ok { background: #16a34a; color: white; font-weight: bold; border: 1px solid #15803d; }
-        .miss { background: #1e293b; color: #475569; border: 1px solid #334155; }
+        .ctrl-day { background: #0f172a; border-radius: 4px; padding: 4px; border: 1px solid #334155; }
+        .tournee-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+        .status-box { font-size: 0.5rem; padding: 1px; border-radius: 1px; text-align: center; font-weight: bold; min-width: 28px; }
+        .ok { background: #16a34a; color: white; border: 1px solid #15803d; }
+        .miss { background: #1e293b; color: #334155; border: 1px solid #1e293b; }
 
-        /* Couleurs Tableau */
         .bg-mal, .bg-at { background-color: #f97316 !important; color: white; }
         .bg-cp { background-color: #fef9c3 !important; color: black; }
         .bg-abs { background-color: #ef4444 !important; color: white; }
@@ -37,7 +36,7 @@
     
     <div class="p-4 bg-slate-900 text-white no-print">
         <div class="flex justify-between items-center mb-4">
-            <h1 class="text-xl font-black text-blue-400">FLUX TOURNÉES OBLIGATOIRES</h1>
+            <h1 class="text-xl font-black text-blue-400">CONTRÔLE TOTAL DES FLUX</h1>
             <div class="flex gap-4">
                 <input type="date" id="monday-picker" onchange="save()" class="bg-slate-700 p-2 rounded text-xs font-bold text-white outline-none">
                 <button onclick="window.print()" class="bg-emerald-600 px-4 py-2 rounded font-bold text-xs uppercase">Imprimer</button>
@@ -59,13 +58,18 @@
 </div>
 
 <script>
-    // Ajout des tournées manquantes (T03, T11, T13, T14, T16, T19, T20, T24, T26/32, T31, T35)
-    const TOURN_OBLIG = ["T03", "T11", "T13", "T14", "T16", "T19", "T20", "T24", "T26/32", "T31", "T35"];
-    const TOURN_AUTRES = ["T2","T4","T6","T8","T9","T10","T12","T15","T17","T18","T21","T22","T23","T28","T29","T30","T33","T34","T37","PONDEREUX","BUREAU"];
-    const ABSENCES = ["CP", "MAL", "AT", "ABS"];
+    // Liste unique et complète regroupant TOUT
+    const LISTE_CHOIX = [
+        "CP", "MAL", "AT", "ABS", "BUREAU", "PONDEREUX",
+        "T02", "T03", "T04", "T06", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20", "T21", "T22", "T23", "T24", "T26/32", "T28", "T29", "T30", "T31", "T33", "T34", "T35", "T37"
+    ];
+
+    // On ne contrôle que les tournées (T...) et Pondéreux
+    const TOURNEES_CONTROLE = LISTE_CHOIX.filter(item => item.startsWith('T') || item === "PONDEREUX");
+
     const EQUIPE = ["ADAM TOM","ALAJOUANINE STEPHANE","BEDAT QUENTIN","BERNARD RYAN","BILLIAUX CELINE","BRUNET NICOLAS","CAMELOT JEAN LUC","CAMPET AURELIEN","CHARGE MICKAEL","CHARRON ANTHONY","CHAUVET EMILIE","CHEVALIER MARIEN","DEBAILLEUL REMI","DIALLO MOHAMED","FARI LAURENT","FERDIN FREDERIC","GELEZ MARION","GRIVELET STEPHANE","GUILLO SEBASTIEN","HOUNTENTO ABEL","HUCHET DIMITRI","JEANNOT MICHAEL","KICHENIN STEVENS","LACAMBRA DAVID","LARRIEU JEAN CHRISTOPHE","LIVET KARINE","MALOKA PRISO EMMANUEL","MAMONA NGUDI AUDRY","MEYNARD THIERRY","MONTES STEEVEN","MOURY ROMARIC","NAVAS MATEO","OMIECINSKI MAX","OUHANI TARIK","PEREZ OCEANE","PETIT AURELIEN","PEZIN WILLIAM","ROUCOU LISA","SEISDEDOS SEBASTIEN","SOUMARE MOUSSA","TEXIER FRANCK","VANACKER LUDOVIC","VIANCE PHILIPPE"];
 
-    let db = JSON.parse(localStorage.getItem('planning_V9_Final')) || {};
+    let db = JSON.parse(localStorage.getItem('planning_V10_Final')) || {};
 
     function initHeader() {
         const monday = document.getElementById('monday-picker').value;
@@ -84,12 +88,8 @@
     }
 
     function createSelect(val) {
-        let opt = `<option value="">--</option><optgroup label="ABSENCE">`;
-        ABSENCES.forEach(a => opt += `<option value="${a}" ${val===a?'selected':''}>${a}</option>`);
-        opt += `</optgroup><optgroup label="PRINCIPALES">`;
-        TOURN_OBLIG.forEach(t => opt += `<option value="${t}" ${val===t?'selected':''}>${t}</option>`);
-        opt += `</optgroup><optgroup label="AUTRES">`;
-        TOURN_AUTRES.forEach(t => opt += `<option value="${t}" ${val===t?'selected':''}>${t}</option>`);
+        let opt = `<option value="">--</option>`;
+        LISTE_CHOIX.forEach(item => opt += `<option value="${item}" ${val===item?'selected':''}>${item}</option>`);
         return `<select class="cell-select" onchange="save()">${opt}</select>`;
     }
 
@@ -114,17 +114,16 @@
 
     function updateControl() {
         const rows = document.querySelectorAll('#planning-body tr');
-        const daysData = Array.from({length: 5}, () => ({ mat: [], apm: [] }));
+        const daysData = Array.from({length: 5}, () => []);
         
         rows.forEach(r => {
             const selects = r.querySelectorAll('.cell-select');
             selects.forEach((s, idx) => {
                 const dayIdx = Math.floor(idx / 2);
-                const phase = idx % 2 === 0 ? 'mat' : 'apm';
                 if(s.value) {
-                    daysData[dayIdx][phase].push(s.value);
+                    daysData[dayIdx].push(s.value);
                     const td = s.parentElement;
-                    td.className = ABSENCES.includes(s.value) ? (s.value === 'CP' ? 'bg-cp' : 'bg-mal') : '';
+                    td.className = (s.value === 'CP') ? 'bg-cp' : (['MAL','AT','ABS'].includes(s.value) ? 'bg-mal' : '');
                 } else { s.parentElement.className = ''; }
             });
         });
@@ -135,9 +134,11 @@
         
         joursLabel.forEach((label, i) => {
             let html = `<div class="ctrl-day"><div class="text-[9px] font-black text-blue-400 text-center mb-1 border-b border-slate-700 pb-1">${label}</div><div class="tournee-list">`;
-            TOURN_OBLIG.forEach(t => {
-                const isOk = daysData[i].mat.includes(t) || daysData[i].apm.includes(t);
-                html += `<div class="status-box ${isOk?'ok':'miss'}"><span>${t}</span><span>${isOk?'✓':''}</span></div>`;
+            TOURNEES_CONTROLE.forEach(t => {
+                const isOk = daysData[i].includes(t);
+                // On affiche juste le numéro pour gagner de la place (ex: 03 au lieu de T03)
+                const shortName = t.replace('T', '');
+                html += `<div class="status-box ${isOk?'ok':'miss'}">${shortName}</div>`;
             });
             html += `</div></div>`;
             panel.innerHTML += html;
@@ -153,7 +154,7 @@
                 cells: Array.from(r.querySelectorAll('.cell-select')).map(s => s.value)
             }))
         };
-        localStorage.setItem('planning_V9_Final', JSON.stringify(db));
+        localStorage.setItem('planning_V10_Final', JSON.stringify(db));
         initHeader();
         updateControl();
     }
