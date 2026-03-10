@@ -1,227 +1,196 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bons d’accord – Colis retour</title>
-<style>
-:root{--primary:#0057a8;--secondary:#f2f6fb;--danger:#c62828}
-body{font-family:Arial;background:var(--secondary);padding:16px}
-.card{background:#fff;padding:20px;border-radius:14px;margin-bottom:18px}
-img.logo{max-width:260px;margin:0 auto 20px;display:block}
-h2{color:var(--primary)}
-select,input{width:100%;padding:14px;font-size:16px;border-radius:10px;border:1px solid #ccc;margin-bottom:12px}
-button{width:100%;padding:14px;font-size:16px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:bold;margin-top:6px}
-button.secondary{background:#777}
-button.danger{background:#c62828}
-#preview img{width:80px;border-radius:8px;margin:4px}
-progress{width:100%;height:20px;margin-top:10px}
-.notice{background:#e8f5e9;color:#1b5e20;padding:10px;border-radius:10px;margin-top:10px;text-align:center;font-weight:bold}
-.hidden{display:none}
-
-/* ADMIN */
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
-th{background:#eef3fa}
-.admin-thumb{width:50px;border-radius:6px}
-.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
-.stat{background:#eef3fa;padding:10px;border-radius:10px;font-weight:bold;text-align:center}
-</style>
+    <meta charset="UTF-8">
+    <title>Planning Pro - Calendrier Dynamique</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell-input { border: none; background: transparent; width: 100%; text-align: center; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .bg-mal, .bg-at { background-color: #f97316 !important; color: white !important; } 
+        .bg-cp { background-color: #fef08a !important; color: black !important; }
+        .bg-error { background-color: #fee2e2 !important; border: 2px solid #ef4444 !important; }
+        .tournee-ok { border-color: #22c55e; color: #15803d; background: #dcfce7; }
+        .tournee-manquante { border-color: #94a3b8; color: #64748b; background: #f1f5f9; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .max-w-5xl { max-width: 100%; box-shadow: none; border: none; }
+            th, td { border: 1px solid #ccc !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
 </head>
+<body class="bg-slate-100 p-4 font-sans text-slate-800">
 
-<body>
-<img src="logo.jpg" class="logo">
+<div class="max-w-5xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200">
+    
+    <div class="p-6 border-b border-slate-100 bg-slate-800 text-white no-print">
+        <div class="flex justify-between items-start mb-4">
+            <div class="space-y-3">
+                <h1 class="text-xl font-bold">🚀 Superviseur Planning</h1>
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex items-center bg-slate-700 rounded-lg p-1">
+                        <span class="px-2 text-[10px] font-bold text-slate-400 uppercase">Fente :</span>
+                        <select id="week-selector" onchange="switchWeek()" class="bg-slate-600 border-none text-white text-sm font-bold rounded focus:ring-0 cursor-pointer">
+                            <option value="S1">Semaine 1</option>
+                            <option value="S2">Semaine 2</option>
+                            <option value="S3">Semaine 3</option>
+                            <option value="S4">Semaine 4</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center bg-slate-700 rounded-lg p-1">
+                        <span class="px-2 text-[10px] font-bold text-slate-400 uppercase">Lundi du :</span>
+                        <input type="date" id="monday-picker" onchange="saveCurrentWeek()" class="bg-slate-600 border-none text-white text-sm font-bold rounded focus:ring-0 cursor-pointer shadow-inner">
+                    </div>
+                    <button onclick="copyPreviousWeek()" class="text-slate-300 hover:text-white text-[10px] font-bold uppercase underline decoration-slate-500">Copier équipe précédente</button>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded font-bold text-xs transition">💾 Partager</button>
+                <button onclick="window.print()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded font-bold text-xs transition">🖨️ Imprimer</button>
+            </div>
+        </div>
+        <div id="status-container" class="bg-slate-700 p-4 rounded-lg flex flex-wrap gap-2"></div>
+    </div>
 
-<!-- UTILISATEUR -->
-<div class="card">
-<h2>📸 Ajout de photos</h2>
+    <div class="overflow-x-auto">
+        <div class="hidden print:block text-center p-4 border-b-2 border-slate-800 font-black text-xl uppercase" id="print-header"></div>
+        <table class="w-full border-collapse">
+            <thead>
+                <tr class="bg-slate-100 text-slate-600 text-[10px] uppercase font-bold">
+                    <th class="border-b p-4 text-left w-64">Collaborateur</th>
+                    <th class="border-b p-4 text-center bg-blue-50/50">Lundi <span id="date-lundi" class="block text-blue-600"></span></th>
+                    <th class="border-b p-4 text-center">Mardi <span id="date-mardi" class="block text-slate-400"></span></th>
+                    <th class="border-b p-4 text-center bg-slate-50/50">Mercredi <span id="date-mercredi" class="block text-slate-400"></span></th>
+                    <th class="border-b p-1 w-10 no-print"></th>
+                </tr>
+            </thead>
+            <tbody id="planning-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+    </div>
 
-<select id="tournee">
-<option value="">-- Tournée --</option>
-<option>B02</option><option>B03</option><option>B04</option>
-<option>B06</option><option>B07</option><option>B08</option>
-<option>T09</option><option>T10</option><option>T11</option><option>T12</option>
-<option>T13</option><option>T14</option><option>T15</option><option>T16</option>
-<option>T17</option><option>T18</option><option>T19</option><option>T20</option>
-<option>T21</option><option>T22</option><option>T23</option><option>T24</option>
-<option>T26</option><option>T28</option><option>T29</option><option>T30</option>
-<option>T31</option><option>B32</option><option>T33</option><option>T34</option><option>T37</option>
-</select>
+    <div class="p-6 bg-white border-t border-slate-200">
+        <h3 class="text-sm font-bold text-slate-500 uppercase mb-2">📝 Notes de service</h3>
+        <textarea id="notes-area" class="w-full p-4 border border-slate-200 rounded-lg bg-slate-50 min-h-[80px] text-sm" placeholder="Consignes..." oninput="saveCurrentWeek()"></textarea>
+    </div>
 
-<input id="bon" placeholder="Numéro du bon d’accord">
-<input type="file" id="files" accept="image/*" multiple>
-
-<div id="preview"></div>
-
-<progress id="progress" value="0" max="100" class="hidden"></progress>
-<div id="confirm" class="notice hidden">✅ Photos envoyées avec succès</div>
-
-<button onclick="upload()">☁️ Envoyer les photos</button>
-<button class="secondary" onclick="resetForm()">Terminé</button>
+    <div class="p-4 bg-slate-50 flex justify-between items-center no-print border-t">
+        <button onclick="addRow()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-indigo-700 transition">+ Ajouter Collaborateur</button>
+        <div id="save-status" class="text-slate-400 text-[10px] uppercase font-bold tracking-widest">Enregistrement auto ✓</div>
+    </div>
 </div>
 
-<!-- ADMIN LOGIN -->
-<div class="card">
-<h2>🔐 Admin</h2>
-<input id="email" placeholder="Email admin">
-<input id="password" type="password" placeholder="Mot de passe">
-<button onclick="login()">Connexion</button>
-</div>
+<script>
+    const tourneesObligatoires = ["T3", "T13", "T14", "T19", "T20", "T24", "T31", "T35"];
+    let db = JSON.parse(localStorage.getItem('planningDatesV1')) || { S1: { planning: [], notes: "", monday: "" } };
 
-<!-- ADMIN -->
-<div id="admin" class="card hidden">
-<h2>📊 Statistiques</h2>
-<div class="stats">
-<div class="stat">Total<br><span id="sTotal">0</span></div>
-<div class="stat">En attente<br><span id="sWait">0</span></div>
-<div class="stat">Traité<br><span id="sDone">0</span></div>
-</div>
+    function getCurrentWeekID() { return document.getElementById('week-selector').value; }
 
-<button class="danger" onclick="cleanup()">🗑️ Supprimer &gt; 30 jours</button>
+    function updateHeaderDates(mondayDate) {
+        if (!mondayDate) {
+            ["lundi", "mardi", "mercredi"].forEach(d => document.getElementById('date-'+d).innerText = "");
+            return;
+        }
+        const d = new Date(mondayDate);
+        const options = { day: '2-digit', month: '2-digit' };
+        document.getElementById('date-lundi').innerText = d.toLocaleDateString('fr-FR', options);
+        d.setDate(d.getDate() + 1);
+        document.getElementById('date-mardi').innerText = d.toLocaleDateString('fr-FR', options);
+        d.setDate(d.getDate() + 1);
+        document.getElementById('date-mercredi').innerText = d.toLocaleDateString('fr-FR', options);
+    }
 
-<table>
-<thead>
-<tr><th>Photo</th><th>Date</th><th>Tournée</th><th>Bon</th><th>Statut</th><th>Actions</th></tr>
-</thead>
-<tbody id="photos"></tbody>
-</table>
-</div>
+    function switchWeek() {
+        const weekID = getCurrentWeekID();
+        loadWeek(weekID);
+    }
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    function saveCurrentWeek() {
+        const weekID = getCurrentWeekID();
+        const rows = document.querySelectorAll('#planning-body tr');
+        const monday = document.getElementById('monday-picker').value;
+        db[weekID] = {
+            monday: monday,
+            planning: Array.from(rows).map(row => ({
+                nom: row.querySelector('.name-input').value,
+                matin: row.querySelectorAll('.cell-input')[0].value,
+                apm: row.querySelectorAll('.cell-input')[1].value,
+                mer: row.querySelectorAll('.cell-input')[2].value
+            })),
+            notes: document.getElementById('notes-area').value
+        };
+        localStorage.setItem('planningDatesV1', JSON.stringify(db));
+        updateHeaderDates(monday);
+        checkConflictsAndCoverage();
+    }
 
-const firebaseConfig={
- apiKey:"AIzaSyBD2yU8B8C-SL8gJMFEIa2PNzvBHuOjYmI",
- authDomain:"storage-retours.firebaseapp.com",
- projectId:"storage-retours"
-};
+    function loadWeek(weekID) {
+        const tbody = document.getElementById('planning-body');
+        tbody.innerHTML = '';
+        const data = db[weekID] || { planning: [], notes: "", monday: "" };
+        document.getElementById('monday-picker').value = data.monday || "";
+        updateHeaderDates(data.monday);
+        
+        if (data.planning.length === 0) addRow("NOM");
+        else data.planning.forEach(item => addRow(item.nom, item.matin, item.apm, item.mer));
+        document.getElementById('notes-area').value = data.notes || "";
+        checkConflictsAndCoverage();
+    }
 
-const CLOUD_NAME="djwfusdud";
-const UPLOAD_PRESET="bon accord";
+    function addRow(nom = "", matin = "", apm = "", mer = "") {
+        const tbody = document.getElementById('planning-body');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-4 border-r border-slate-50 font-bold bg-slate-50/30">
+                <input type="text" class="name-input w-full bg-transparent outline-none uppercase" value="${nom}" oninput="saveCurrentWeek()">
+            </td>
+            <td class="p-2 cell-container border-r border-slate-100">
+                <input type="text" class="cell-input" value="${matin}" placeholder="Matin" oninput="saveCurrentWeek()">
+            </td>
+            <td class="p-2 cell-container border-r border-slate-100">
+                <input type="text" class="cell-input" value="${apm}" placeholder="Midi" oninput="saveCurrentWeek()">
+            </td>
+            <td class="p-2 cell-container border-r border-slate-100">
+                <input type="text" class="cell-input" value="${mer}" placeholder="Mer." oninput="saveCurrentWeek()">
+            </td>
+            <td class="p-1 text-center no-print">
+                <button onclick="this.parentElement.parentElement.remove(); saveCurrentWeek();" class="text-slate-300 hover:text-red-500 font-bold">×</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        checkConflictsAndCoverage();
+    }
 
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
+    function checkConflictsAndCoverage() {
+        const values = [];
+        document.querySelectorAll('.cell-container').forEach(c => c.className = "p-2 cell-container border-r border-slate-100");
+        document.querySelectorAll('.cell-input').forEach(input => {
+            const val = input.value.trim().toUpperCase();
+            if (!val) return;
+            const container = input.parentElement;
+            if(val === "CP") container.classList.add('bg-cp');
+            if(val === "MAL" || val === "AT") container.classList.add('bg-mal');
+            if(val.startsWith('T')) values.push(val);
+        });
+        const container = document.getElementById('status-container');
+        container.innerHTML = '';
+        tourneesObligatoires.forEach(t => {
+            const ok = values.includes(t);
+            const badge = document.createElement('div');
+            badge.className = `px-3 py-1 border rounded text-[10px] font-black ${ok ? 'tournee-ok' : 'tournee-manquante opacity-40'}`;
+            badge.innerText = `${t} ${ok ? '✓' : '○'}`;
+            container.appendChild(badge);
+        });
+    }
 
-const files=document.getElementById("files");
-const preview=document.getElementById("preview");
-const progress=document.getElementById("progress");
-const confirmBox=document.getElementById("confirm");
-const tournee=document.getElementById("tournee");
-const bon=document.getElementById("bon");
-const photosEl=document.getElementById("photos");
+    function exportData() {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'}));
+        a.download = `planning_complet.json`;
+        a.click();
+    }
 
-let photosTemp=[],all=[];
-
-/* MULTI-SELECT FIX */
-files.addEventListener("change",()=>{
- [...files.files].forEach(file=>{
-  const reader=new FileReader();
-  reader.onload=e=>{
-   photosTemp.push(e.target.result);
-   const img=document.createElement("img");
-   img.src=e.target.result;
-   preview.appendChild(img);
-  };
-  reader.readAsDataURL(file);
- });
- files.value="";
-});
-
-async function uploadBase64(img,i,total){
- return new Promise(res=>{
-  const xhr=new XMLHttpRequest();
-  const form=new FormData();
-  form.append("file",img);
-  form.append("upload_preset",UPLOAD_PRESET);
-  xhr.upload.onprogress=e=>{
-   if(e.lengthComputable){
-    progress.value=Math.round(((i+e.loaded/e.total)/total)*100);
-   }
-  };
-  xhr.onload=async()=>{
-   const d=JSON.parse(xhr.responseText);
-   await addDoc(collection(db,"photos"),{
-    tournee:tournee.value,
-    bon:bon.value,
-    date:new Date(),
-    url:d.secure_url,
-    traite:false
-   });
-   res();
-  };
-  xhr.open("POST",`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
-  xhr.send(form);
- });
-}
-
-window.upload=async()=>{
- if(!photosTemp.length)return alert("Aucune photo");
- progress.classList.remove("hidden");
- confirmBox.classList.add("hidden");
- for(let i=0;i<photosTemp.length;i++){
-  await uploadBase64(photosTemp[i],i,photosTemp.length);
- }
- progress.classList.add("hidden");
- confirmBox.classList.remove("hidden");
-};
-
-window.resetForm=()=>{
- photosTemp=[];
- preview.innerHTML="";
- bon.value="";
- tournee.value="";
- confirmBox.classList.add("hidden");
-};
-
-window.login=()=>{
- signInWithEmailAndPassword(auth,email.value,password.value)
- .then(()=>{admin.classList.remove("hidden");load();});
-};
-
-function load(){
- onSnapshot(collection(db,"photos"),snap=>{
-  all=[];
-  photosEl.innerHTML="";
-  let w=0,d=0;
-  snap.forEach(docu=>{
-   const p={id:docu.id,...docu.data()};
-   all.push(p);
-   p.traite?d++:w++;
-   photosEl.innerHTML+=`<tr>
-    <td><a href="${p.url}" target="_blank"><img src="${p.url}" class="admin-thumb"></a></td>
-    <td>${new Date(p.date.seconds*1000).toLocaleDateString()}</td>
-    <td>${p.tournee}</td>
-    <td>${p.bon||""}</td>
-    <td>${p.traite?"✅":"⏳"}</td>
-    <td>
-      <button onclick="valider('${p.id}')">✔</button>
-      <button class="danger" onclick="supprimer('${p.id}')">🗑️</button>
-    </td>
-   </tr>`;
-  });
-  sTotal.textContent=all.length;
-  sWait.textContent=w;
-  sDone.textContent=d;
- });
-}
-
-window.valider=id=>updateDoc(doc(db,"photos",id),{traite:true});
-window.supprimer=id=>deleteDoc(doc(db,"photos",id));
-
-window.cleanup=async()=>{
- if(!confirm("Supprimer les photos de plus de 30 jours ?"))return;
- const limit=Date.now()-30*24*60*60*1000;
- for(const p of all){
-  if(p.date.seconds*1000<limit){
-   await deleteDoc(doc(db,"photos",p.id));
-  }
- }
- alert("Nettoyage terminé");
-};
+    switchWeek();
 </script>
-
 </body>
 </html>
