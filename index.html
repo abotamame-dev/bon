@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1280">
-    <title>Contrôle Flux & Doublons</title>
+    <title>Planning Logistique - Horaires Variables</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; border: 2px solid #000; }
         th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.6rem; padding: 0; height: 30px; }
-        .name-col { width: 180px; text-align: left; padding-left: 8px; font-weight: 800; background: #f8fafc; font-size: 0.7rem; }
-        .hour-col { width: 42px; background: #f1f5f9; color: #64748b; font-size: 0.5rem; font-weight: bold; }
+        
+        .name-col { width: 180px; text-align: left; padding-left: 6px; font-weight: 800; background: #f8fafc; font-size: 0.7rem; border-right: 2px solid #000; }
+        /* Style des inputs d'heure pour qu'ils soient discrets */
+        .hour-input { width: 100%; height: 100%; border: none; text-align: center; font-size: 0.55rem; background: #f1f5f9; font-weight: bold; color: #475569; outline: none; }
         .cell-select { width: 100%; height: 100%; border: none; text-align: center; font-weight: 900; text-transform: uppercase; background: transparent; outline: none; appearance: none; cursor: pointer; font-size: 0.65rem; }
         
-        .header-date { background-color: #1e40af; color: white; font-weight: 900; height: 30px; }
-        .header-sub { background-color: #fef08a; font-weight: 800; height: 20px; color: #854d0e; }
+        .header-date { background-color: #3b82f6; color: white; font-weight: 900; height: 35px; border: 1px solid #1d4ed8; }
+        .header-sub { background-color: #fef08a; font-weight: 800; height: 20px; color: #854d0e; border: 1px solid #eab308; }
         
-        /* DOUBLON : Gris foncé / Texte blanc */
+        /* Couleurs de statut */
         .bg-doublon { background-color: #475569 !important; color: white !important; }
-        
-        /* Autres couleurs */
         .bg-mal, .bg-at { background-color: #f97316 !important; color: white; }
         .bg-cp { background-color: #fef9c3 !important; color: black; }
         .bg-abs { background-color: #ef4444 !important; color: white; }
 
-        /* Panel Contrôle */
+        /* Panel Contrôle Matin/APM */
         .ctrl-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
         .ctrl-day { background: #0f172a; border-radius: 4px; padding: 4px; border: 1px solid #334155; }
         .tournee-row { display: flex; align-items: center; margin-bottom: 1px; }
         .tournee-list { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; flex: 1; }
-        .status-box { font-size: 0.45rem; padding: 1px; text-align: center; font-weight: bold; border-radius: 1px; }
-        .ok { background: #16a34a; color: white; border: 1px solid #15803d; }
-        .miss { background: #1e293b; color: #334155; border: 1px solid #1e293b; }
+        .status-box { font-size: 0.42rem; padding: 1px; text-align: center; font-weight: bold; border-radius: 1px; border: 1px solid transparent; }
+        .ok { background: #16a34a; color: white; border-color: #15803d; }
+        .miss { background: #1e293b; color: #334155; border-color: #1e293b; }
 
         @media print { .no-print { display: none !important; } }
     </style>
@@ -39,7 +39,13 @@
 
 <div class="mx-auto bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-300">
     <div class="p-3 bg-slate-900 text-white no-print">
-        <div class="flex justify-between items-center mb-3 text-blue-400 font-black italic">ALERTE DOUBLONS : GRIS FONCÉ</div>
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-lg font-black text-blue-400 uppercase italic">Suivi Matin (5h-6h15) & APM (11h30-12h15)</h1>
+            <div class="flex gap-2">
+                <input type="date" id="monday-picker" onchange="save()" class="bg-slate-700 p-1 rounded text-[10px] font-bold text-white">
+                <button onclick="window.print()" class="bg-emerald-600 px-3 py-1 rounded font-bold text-[10px]">🖨️ IMPRIMER</button>
+            </div>
+        </div>
         <div class="ctrl-grid" id="control-panel"></div>
     </div>
 
@@ -59,17 +65,51 @@
     const TOURNEES_CTRL = LISTE_CHOIX.filter(t => t.startsWith('T'));
     const EQUIPE = ["ADAM TOM","ALAJOUANINE STEPHANE","BEDAT QUENTIN","BERNARD RYAN","BILLIAUX CELINE","BRUNET NICOLAS","CAMELOT JEAN LUC","CAMPET AURELIEN","CHARGE MICKAEL","CHARRON ANTHONY","CHAUVET EMILIE","CHEVALIER MARIEN","DEBAILLEUL REMI","DIALLO MOHAMED","FARI LAURENT","FERDIN FREDERIC","GELEZ MARION","GRIVELET STEPHANE","GUILLO SEBASTIEN","HOUNTENTO ABEL","HUCHET DIMITRI","JEANNOT MICHAEL","KICHENIN STEVENS","LACAMBRA DAVID","LARRIEU JEAN CHRISTOPHE","LIVET KARINE","MALOKA PRISO EMMANUEL","MAMONA NGUDI AUDRY","MEYNARD THIERRY","MONTES STEEVEN","MOURY ROMARIC","NAVAS MATEO","OMIECINSKI MAX","OUHANI TARIK","PEREZ OCEANE","PETIT AURELIEN","PEZIN WILLIAM","ROUCOU LISA","SEISDEDOS SEBASTIEN","SOUMARE MOUSSA","TEXIER FRANCK","VANACKER LUDOVIC","VIANCE PHILIPPE"];
 
-    let db = JSON.parse(localStorage.getItem('planning_V12_Doublons')) || {};
+    // Horaires par défaut selon ta demande
+    const H_MATIN = ["05h00", "05h30", "05h45", "06h15"];
+    const H_APM = ["11h30", "12h15"];
+
+    let db = JSON.parse(localStorage.getItem('planning_V16_Final')) || { data: [] };
 
     function initHeader() {
+        const monday = document.getElementById('monday-picker').value;
         const rDates = document.getElementById('row-dates');
         const rHeads = document.getElementById('row-headers');
         rDates.innerHTML = '<th class="header-date">DATE</th>';
-        rHeads.innerHTML = '<th class="header-sub">COLLABORATEUR</th>';
+        rHeads.innerHTML = '<th class="header-sub" style="border-right: 2px solid #000">COLLABORATEUR</th>';
+
         for (let i = 0; i < 5; i++) {
-            rDates.innerHTML += `<th colspan="3" class="header-date">JOUR ${i+1}</th>`;
-            rHeads.innerHTML += `<th class="header-sub">H</th><th class="header-sub">MAT</th><th class="header-sub">APM</th>`;
+            let label = ["LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI"][i];
+            rDates.innerHTML += `<th colspan="4" class="header-date" style="border-left: 2px solid #000">${label}</th>`;
+            rHeads.innerHTML += `<th class="header-sub">H</th><th class="header-sub">MATIN</th><th class="header-sub">H</th><th class="header-sub">APM</th>`;
         }
+    }
+
+    function render() {
+        const tbody = document.getElementById('planning-body');
+        tbody.innerHTML = '';
+        EQUIPE.forEach((name, idx) => {
+            const emp = db.data.find(e => e.name === name) || { 
+                cells: Array(10).fill(""), 
+                hours: Array(10).fill("") 
+            };
+            const tr = document.createElement('tr');
+            let html = `<td class="name-col">${name}</td>`;
+            for (let i = 0; i < 5; i++) {
+                // Heure Matin (Défaut 05h30)
+                let hMat = emp.hours[i*2] || "05h30";
+                // Heure APM (Défaut 11h30)
+                let hApm = emp.hours[i*2+1] || "11h30";
+
+                html += `<td class="hour-col"><input type="text" class="hour-input" onchange="save()" value="${hMat}"></td>
+                         <td>${createSelect(emp.cells[i*2])}</td>
+                         <td class="hour-col"><input type="text" class="hour-input" onchange="save()" value="${hApm}"></td>
+                         <td>${createSelect(emp.cells[i*2+1])}</td>`;
+            }
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        });
+        checkAll();
     }
 
     function createSelect(val) {
@@ -78,76 +118,39 @@
         return `<select class="cell-select" onchange="save()">${opt}</select>`;
     }
 
-    function render() {
-        const tbody = document.getElementById('planning-body');
-        tbody.innerHTML = '';
-        const curData = db.data || [];
-        EQUIPE.forEach(name => {
-            const emp = curData.find(e => e.name === name) || { cells: Array(10).fill("") };
-            const tr = document.createElement('tr');
-            let html = `<td class="name-col">${name}</td>`;
-            for (let i = 0; i < 10; i++) {
-                if(i%2===0) html += `<td class="hour-col">05h30</td>`;
-                html += `<td>${createSelect(emp.cells[i])}</td>`;
-            }
-            tr.innerHTML = html;
-            tbody.appendChild(tr);
-        });
-        checkDoublons();
-    }
-
-    function checkDoublons() {
+    function checkAll() {
         const selects = document.querySelectorAll('.cell-select');
         const countsBySlot = Array.from({length: 10}, () => ({}));
         const daysData = Array.from({length: 5}, () => ({ mat: [], apm: [] }));
 
-        // 1. Compter les occurrences par créneau
         selects.forEach((s, idx) => {
             const slotIdx = idx % 10;
-            const val = s.value;
-            if(val && val.startsWith('T')) {
-                countsBySlot[slotIdx][val] = (countsBySlot[slotIdx][val] || 0) + 1;
-            }
+            if(s.value && s.value.startsWith('T')) countsBySlot[slotIdx][s.value] = (countsBySlot[slotIdx][s.value] || 0) + 1;
         });
 
-        // 2. Appliquer les couleurs
         selects.forEach((s, idx) => {
             const slotIdx = idx % 10;
             const dayIdx = Math.floor(slotIdx / 2);
             const phase = (slotIdx % 2 === 0) ? 'mat' : 'apm';
-            const val = s.value;
             const td = s.parentElement;
             td.className = "";
-
-            if(val) {
-                // Coloration Doublon si la tournée apparaît plus d'une fois dans le même slot
-                if(val.startsWith('T') && countsBySlot[slotIdx][val] > 1) {
-                    td.classList.add('bg-doublon');
-                } else if(val === 'CP') {
-                    td.classList.add('bg-cp');
-                } else if(['MAL','AT','ABS'].includes(val)) {
-                    td.classList.add('bg-mal');
-                }
-                daysData[dayIdx][phase].push(val);
+            if(s.value) {
+                if(s.value.startsWith('T') && countsBySlot[slotIdx][s.value] > 1) td.classList.add('bg-doublon');
+                else if(s.value === 'CP') td.classList.add('bg-cp');
+                else if(['MAL','AT','ABS'].includes(s.value)) td.classList.add('bg-mal');
+                daysData[dayIdx][phase].push(s.value);
             }
         });
 
-        // 3. Mise à jour Panel
         const panel = document.getElementById('control-panel');
         panel.innerHTML = '';
         ["LUN", "MAR", "MER", "JEU", "VEN"].forEach((label, i) => {
             let html = `<div class="ctrl-day">
                 <div class="text-[8px] font-black text-blue-400 text-center mb-1 border-b border-slate-700">${label}</div>
-                <div class="tournee-row"><span class="phase-label" style="color:#94a3b8; font-size:0.5rem; margin-right:2px">M</span><div class="tournee-list">`;
-            TOURNEES_CTRL.forEach(t => {
-                const ok = daysData[i].mat.includes(t);
-                html += `<div class="status-box ${ok?'ok':'miss'}">${t.replace('T','')}</div>`;
-            });
-            html += `</div></div><div class="tournee-row"><span class="phase-label" style="color:#94a3b8; font-size:0.5rem; margin-right:2px">A</span><div class="tournee-list">`;
-            TOURNEES_CTRL.forEach(t => {
-                const ok = daysData[i].apm.includes(t);
-                html += `<div class="status-box ${ok?'ok':'miss'}">${t.replace('T','')}</div>`;
-            });
+                <div class="tournee-row"><span style="font-size:0.5rem; width:8px; color:#94a3b8">M</span><div class="tournee-list">`;
+            TOURNEES_CTRL.forEach(t => html += `<div class="status-box ${daysData[i].mat.includes(t)?'ok':'miss'}">${t.replace('T','')}</div>`);
+            html += `</div></div><div class="tournee-row"><span style="font-size:0.5rem; width:8px; color:#94a3b8">A</span><div class="tournee-list">`;
+            TOURNEES_CTRL.forEach(t => html += `<div class="status-box ${daysData[i].apm.includes(t)?'ok':'miss'}">${t.replace('T','')}</div>`);
             html += `</div></div></div>`;
             panel.innerHTML += html;
         });
@@ -155,12 +158,13 @@
 
     function save() {
         const rows = document.querySelectorAll('#planning-body tr');
-        db = { data: Array.from(rows).map(r => ({
+        db = { monday: document.getElementById('monday-picker').value, data: Array.from(rows).map(r => ({
             name: r.querySelector('.name-col').innerText,
-            cells: Array.from(r.querySelectorAll('.cell-select')).map(s => s.value)
+            cells: Array.from(r.querySelectorAll('.cell-select')).map(s => s.value),
+            hours: Array.from(r.querySelectorAll('.hour-input')).map(h => h.value)
         }))};
-        localStorage.setItem('planning_V12_Doublons', JSON.stringify(db));
-        checkDoublons();
+        localStorage.setItem('planning_V16_Final', JSON.stringify(db));
+        checkAll();
     }
 
     initHeader(); render();
