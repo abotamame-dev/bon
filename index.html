@@ -3,51 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1280">
-    <title>Planning Logistique - Saisie Rapide</title>
+    <title>Planning Logistique - Contrôle Intégral</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-        th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem; padding: 0; height: 35px; }
+        th, td { border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem; padding: 0; height: 32px; }
         .name-col { width: 180px; text-align: left; padding-left: 8px; font-weight: 800; background: #f8fafc; font-size: 0.75rem; }
-        .hour-col { width: 50px; background: #f1f5f9; color: #64748b; font-size: 0.6rem; font-weight: bold; }
+        .hour-col { width: 45px; background: #f1f5f9; color: #64748b; font-size: 0.55rem; font-weight: bold; }
+        .cell-select { width: 100%; height: 100%; border: none; text-align: center; font-weight: 900; text-transform: uppercase; background: transparent; outline: none; appearance: none; cursor: pointer; font-size: 0.7rem; }
         
-        /* Menu déroulant invisible mais fonctionnel */
-        .cell-select { width: 100%; height: 100%; border: none; text-align: center; font-weight: 900; text-transform: uppercase; background: transparent; outline: none; appearance: none; cursor: pointer; font-size: 0.75rem; }
+        .header-date { background-color: #1e40af; color: white; font-weight: 900; height: 35px; }
+        .header-sub { background-color: #fef08a; font-weight: 800; height: 25px; color: #854d0e; }
         
-        /* Couleurs selon ton image */
-        .header-date { background-color: #3b82f6; color: white; font-weight: 900; height: 40px; }
-        .header-sub { background-color: #fef08a; font-weight: 800; height: 30px; }
+        /* Panneau de Contrôle Optimisé */
+        .ctrl-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
+        .ctrl-day { background: #0f172a; border-radius: 4px; padding: 6px; border: 1px solid #334155; }
+        .tournee-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; }
+        .status-box { font-size: 0.55rem; padding: 1px 4px; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; }
+        .ok { background: #16a34a; color: white; font-weight: bold; border: 1px solid #15803d; }
+        .miss { background: #1e293b; color: #475569; border: 1px solid #334155; }
+
+        /* Couleurs Tableau */
         .bg-mal, .bg-at { background-color: #f97316 !important; color: white; }
-        .bg-cp { background-color: #fef08a !important; color: black; }
+        .bg-cp { background-color: #fef9c3 !important; color: black; }
         .bg-abs { background-color: #ef4444 !important; color: white; }
-        .bg-bureau { background-color: #e2e8f0; }
-        .tournee-ok { background-color: #22c55e !important; color: white !important; border-color: #15803d !important; }
         
-        @media print { .no-print { display: none !important; } body { padding: 0; } table { font-size: 0.5rem; } }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="bg-slate-200 p-2">
 
 <div class="mx-auto bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-300">
     
-    <div class="p-4 bg-slate-800 text-white no-print">
+    <div class="p-4 bg-slate-900 text-white no-print">
         <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center gap-4">
-                <h1 class="text-xl font-black text-blue-400">PLANNING LOGISTIQUE</h1>
-                <input type="date" id="monday-picker" onchange="save()" class="bg-slate-700 p-2 rounded text-xs font-bold outline-none">
-            </div>
-            <div class="flex gap-2">
+            <h1 class="text-xl font-black text-blue-400">FLUX TOURNÉES OBLIGATOIRES</h1>
+            <div class="flex gap-4">
+                <input type="date" id="monday-picker" onchange="save()" class="bg-slate-700 p-2 rounded text-xs font-bold text-white outline-none">
                 <button onclick="window.print()" class="bg-emerald-600 px-4 py-2 rounded font-bold text-xs uppercase">Imprimer</button>
-                <button onclick="resetAll()" class="bg-red-600 px-4 py-2 rounded font-bold text-xs uppercase">Reset</button>
             </div>
         </div>
-        
-        <p class="text-[10px] text-slate-400 font-bold mb-1 uppercase italic">Contrôle de présence des tournées :</p>
-        <div id="status-container" class="flex flex-wrap gap-1 p-2 bg-black/30 rounded-lg min-h-[40px]"></div>
+
+        <div class="ctrl-grid" id="control-panel"></div>
     </div>
 
     <div class="overflow-x-auto">
-        <table id="main-table">
+        <table>
             <thead>
                 <tr id="row-dates"><th class="header-date">DATE</th></tr>
                 <tr id="row-headers"><th class="header-sub">COLLABORATEUR</th></tr>
@@ -58,13 +59,13 @@
 </div>
 
 <script>
-    // TOUTES les tournées identifiées sur tes documents
-    const TOUTES_TOURNEES = ["T2", "T3", "T4", "T6", "T8", "T9", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20", "T21", "T22", "T23", "T24", "T26/32", "T28", "T29", "T30", "T31", "T33", "T34", "T35", "T37", "PONDEREUX", "BUREAU"];
-    const ABSENCES = ["CP", "MAL", "AT", "ABS", "---"];
-    
+    // Ajout des tournées manquantes (T03, T11, T13, T14, T16, T19, T20, T24, T26/32, T31, T35)
+    const TOURN_OBLIG = ["T03", "T11", "T13", "T14", "T16", "T19", "T20", "T24", "T26/32", "T31", "T35"];
+    const TOURN_AUTRES = ["T2","T4","T6","T8","T9","T10","T12","T15","T17","T18","T21","T22","T23","T28","T29","T30","T33","T34","T37","PONDEREUX","BUREAU"];
+    const ABSENCES = ["CP", "MAL", "AT", "ABS"];
     const EQUIPE = ["ADAM TOM","ALAJOUANINE STEPHANE","BEDAT QUENTIN","BERNARD RYAN","BILLIAUX CELINE","BRUNET NICOLAS","CAMELOT JEAN LUC","CAMPET AURELIEN","CHARGE MICKAEL","CHARRON ANTHONY","CHAUVET EMILIE","CHEVALIER MARIEN","DEBAILLEUL REMI","DIALLO MOHAMED","FARI LAURENT","FERDIN FREDERIC","GELEZ MARION","GRIVELET STEPHANE","GUILLO SEBASTIEN","HOUNTENTO ABEL","HUCHET DIMITRI","JEANNOT MICHAEL","KICHENIN STEVENS","LACAMBRA DAVID","LARRIEU JEAN CHRISTOPHE","LIVET KARINE","MALOKA PRISO EMMANUEL","MAMONA NGUDI AUDRY","MEYNARD THIERRY","MONTES STEEVEN","MOURY ROMARIC","NAVAS MATEO","OMIECINSKI MAX","OUHANI TARIK","PEREZ OCEANE","PETIT AURELIEN","PEZIN WILLIAM","ROUCOU LISA","SEISDEDOS SEBASTIEN","SOUMARE MOUSSA","TEXIER FRANCK","VANACKER LUDOVIC","VIANCE PHILIPPE"];
 
-    let db = JSON.parse(localStorage.getItem('planningV6_Final')) || {};
+    let db = JSON.parse(localStorage.getItem('planning_V9_Final')) || {};
 
     function initHeader() {
         const monday = document.getElementById('monday-picker').value;
@@ -78,26 +79,26 @@
             if(monday) d.setDate(d.getDate() + i);
             let label = monday ? d.toLocaleDateString('fr-FR') : ["LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI"][i];
             rDates.innerHTML += `<th colspan="3" class="header-date">${label}</th>`;
-            rHeads.innerHTML += `<th class="header-sub" style="width:45px">HEURE</th><th class="header-sub">MATIN</th><th class="header-sub">APM</th>`;
+            rHeads.innerHTML += `<th class="header-sub">H</th><th class="header-sub">MATIN</th><th class="header-sub">APM</th>`;
         }
     }
 
     function createSelect(val) {
-        let options = `<option value="">---</option>`;
-        ABSENCES.forEach(a => options += `<option value="${a}" ${val===a?'selected':''}>${a}</option>`);
-        options += `<optgroup label="TOURNEES">`;
-        TOUTES_TOURNEES.forEach(t => options += `<option value="${t}" ${val===t?'selected':''}>${t}</option>`);
-        options += `</optgroup>`;
-        return `<select class="cell-select" onchange="save()">${options}</select>`;
+        let opt = `<option value="">--</option><optgroup label="ABSENCE">`;
+        ABSENCES.forEach(a => opt += `<option value="${a}" ${val===a?'selected':''}>${a}</option>`);
+        opt += `</optgroup><optgroup label="PRINCIPALES">`;
+        TOURN_OBLIG.forEach(t => opt += `<option value="${t}" ${val===t?'selected':''}>${t}</option>`);
+        opt += `</optgroup><optgroup label="AUTRES">`;
+        TOURN_AUTRES.forEach(t => opt += `<option value="${t}" ${val===t?'selected':''}>${t}</option>`);
+        return `<select class="cell-select" onchange="save()">${opt}</select>`;
     }
 
-    function renderTable() {
+    function render() {
         const tbody = document.getElementById('planning-body');
         tbody.innerHTML = '';
-        const currentData = db.data || [];
-
+        const curData = db.data || [];
         EQUIPE.forEach(name => {
-            const emp = currentData.find(e => e.name === name) || { cells: Array(10).fill("") };
+            const emp = curData.find(e => e.name === name) || { cells: Array(10).fill("") };
             const tr = document.createElement('tr');
             let html = `<td class="name-col">${name}</td>`;
             for (let i = 0; i < 5; i++) {
@@ -108,28 +109,38 @@
             tr.innerHTML = html;
             tbody.appendChild(tr);
         });
-        checkAll();
+        updateControl();
     }
 
-    function checkAll() {
-        const selects = document.querySelectorAll('.cell-select');
-        const found = [];
-        selects.forEach(s => {
-            const v = s.value;
-            const td = s.parentElement;
-            td.className = "";
-            if(v === "CP") td.classList.add('bg-cp');
-            else if(v === "MAL" || v === "AT") td.classList.add('bg-mal');
-            else if(v === "ABS") td.classList.add('bg-abs');
-            else if(v === "BUREAU") td.classList.add('bg-bureau');
-            if(v) found.push(v);
+    function updateControl() {
+        const rows = document.querySelectorAll('#planning-body tr');
+        const daysData = Array.from({length: 5}, () => ({ mat: [], apm: [] }));
+        
+        rows.forEach(r => {
+            const selects = r.querySelectorAll('.cell-select');
+            selects.forEach((s, idx) => {
+                const dayIdx = Math.floor(idx / 2);
+                const phase = idx % 2 === 0 ? 'mat' : 'apm';
+                if(s.value) {
+                    daysData[dayIdx][phase].push(s.value);
+                    const td = s.parentElement;
+                    td.className = ABSENCES.includes(s.value) ? (s.value === 'CP' ? 'bg-cp' : 'bg-mal') : '';
+                } else { s.parentElement.className = ''; }
+            });
         });
 
-        const status = document.getElementById('status-container');
-        status.innerHTML = '';
-        TOUTES_TOURNEES.forEach(t => {
-            const ok = found.includes(t);
-            status.innerHTML += `<div class="px-2 py-1 rounded text-[9px] font-black border transition-all ${ok ? 'tournee-ok' : 'opacity-20 text-white border-slate-600'}">${t}</div>`;
+        const panel = document.getElementById('control-panel');
+        panel.innerHTML = '';
+        const joursLabel = ["LUN", "MAR", "MER", "JEU", "VEN"];
+        
+        joursLabel.forEach((label, i) => {
+            let html = `<div class="ctrl-day"><div class="text-[9px] font-black text-blue-400 text-center mb-1 border-b border-slate-700 pb-1">${label}</div><div class="tournee-list">`;
+            TOURN_OBLIG.forEach(t => {
+                const isOk = daysData[i].mat.includes(t) || daysData[i].apm.includes(t);
+                html += `<div class="status-box ${isOk?'ok':'miss'}"><span>${t}</span><span>${isOk?'✓':''}</span></div>`;
+            });
+            html += `</div></div>`;
+            panel.innerHTML += html;
         });
     }
 
@@ -142,16 +153,14 @@
                 cells: Array.from(r.querySelectorAll('.cell-select')).map(s => s.value)
             }))
         };
-        localStorage.setItem('planningV6_Final', JSON.stringify(db));
+        localStorage.setItem('planning_V9_Final', JSON.stringify(db));
         initHeader();
-        checkAll();
+        updateControl();
     }
-
-    function resetAll() { if(confirm("Réinitialiser tout le planning ?")) { localStorage.clear(); location.reload(); } }
 
     document.getElementById('monday-picker').value = db.monday || "";
     initHeader();
-    renderTable();
+    render();
 </script>
 </body>
 </html>
