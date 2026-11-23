@@ -1,0 +1,10 @@
+# Environnement d'exécution de l'agent, synchronisé avec `ant apply` (voir README.md).
+# Réseau limité : l'agent n'a besoin d'aucun site extérieur, seulement des registres
+# de paquets (pip/npm) au cas où il installe une bibliothèque de lecture Excel.
+name: synthese-hebdo-env
+config:
+  type: cloud
+  networking:
+    type: limited
+    allow_package_managers: true
+    allow_mcp_servers: false

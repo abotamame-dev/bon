@@ -1,0 +1,71 @@
+# Synthèse hebdomadaire : chaque vendredi à 7h (heure de Paris), ou à la demande.
+# GitHub planifie en UTC : deux créneaux (5h et 6h UTC) couvrent l'heure d'été et
+# l'heure d'hiver ; l'étape "Vérifier l'heure" ne garde que celui qui tombe à 7h à Paris.
+name: Synthèse hebdo
+
+on:
+  schedule:
+    - cron: "0 5 * * 5"
+    - cron: "0 6 * * 5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: synthese-hebdo
+  cancel-in-progress: false
+
+jobs:
+  synthese:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: synthese-hebdo
+    steps:
+      - name: Vérifier l'heure (Paris)
+        id: heure
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(TZ=Europe/Paris date +%H)" != "07" ]; then
+            echo "Pas 7h à Paris : on attend l'autre créneau."
+            echo "lancer=non" >> "$GITHUB_OUTPUT"
+          else
+            echo "lancer=oui" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.heure.outputs.lancer == 'oui'
+
+      - uses: actions/setup-node@v4
+        if: steps.heure.outputs.lancer == 'oui'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: synthese-hebdo/package-lock.json
+
+      - name: Installer
+        if: steps.heure.outputs.lancer == 'oui'
+        run: npm ci
+
+      - name: Générer et livrer la synthèse
+        if: steps.heure.outputs.lancer == 'oui'
+        run: npm start
+        env:
+          # Secrets (Settings > Secrets and variables > Actions > Secrets)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          # Variables (Settings > Secrets and variables > Actions > Variables)
+          AGENT_ID: ${{ vars.AGENT_ID }}
+          ENVIRONMENT_ID: ${{ vars.ENVIRONMENT_ID }}
+          BOITE_MAIL: ${{ vars.BOITE_MAIL }}
+          FILTRE_EXPEDITEURS: ${{ vars.FILTRE_EXPEDITEURS }}
+          FILTRE_OBJET: ${{ vars.FILTRE_OBJET }}
+          JOURS_EN_ARRIERE: ${{ vars.JOURS_EN_ARRIERE }}
+          DOSSIER_ONEDRIVE: ${{ vars.DOSSIER_ONEDRIVE }}
+          DESTINATAIRES: ${{ vars.DESTINATAIRES }}
+          MODE_LIVRAISON: ${{ vars.MODE_LIVRAISON }}
+          BUDGET_CENTIMES: ${{ vars.BUDGET_CENTIMES }}
